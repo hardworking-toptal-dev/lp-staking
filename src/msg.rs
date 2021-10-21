@@ -30,7 +30,14 @@ pub enum Cw20HookMsg {
 pub enum QueryMsg {
     Config {},
     State {},
-    StakerInfo { staker: String },
+    StakerInfo {
+        staker: String,
+    },
+    StakersInfo {
+        start_after: Option<String>,
+        limit: Option<u32>,
+        order_by: Option<OrderBy>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -56,4 +63,16 @@ pub struct StakerInfoResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct StakersInfoResponse {
+    pub stakers: Vec<StakerInfoResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MigrateMsg {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderBy {
+    Asc,
+    Desc,
+}

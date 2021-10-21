@@ -5,7 +5,7 @@ use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use miaw_lp_staking::msg::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StakerInfoResponse,
-    StateResponse,
+    StateResponse, StakersInfoResponse
 };
 
 fn main() {
@@ -21,4 +21,5 @@ fn main() {
     export_schema(&schema_for!(ConfigResponse), &out_dir);
     export_schema(&schema_for!(StateResponse), &out_dir);
     export_schema(&schema_for!(StakerInfoResponse), &out_dir);
+    export_schema(&schema_for!(StakersInfoResponse), &out_dir);
 }

@@ -7,8 +7,8 @@ use cosmwasm_std::{attr, from_binary, to_binary, CosmosMsg, SubMsg, Uint128, Was
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::msg::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StakerInfoResponse,
-    StateResponse,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, OrderBy, QueryMsg, StakerInfoResponse,
+    StakersInfoResponse, StateResponse,
 };
 
 #[test]
@@ -459,4 +459,167 @@ fn test_bond_hook() {
         ]
     );
     assert!(res.messages.is_empty());
+}
+
+#[test]
+fn test_query_stakers() {
+    let mut deps = mock_dependencies(&[]);
+    let default_genesis_seconds: u64 = mock_env().block.time.seconds();
+
+    let msg = InstantiateMsg {
+        miaw_token: "miaw0000".to_string(),
+        miaw_lp_token: "miawlp0000".to_string(),
+        distribution_schedule: vec![(
+            default_genesis_seconds,
+            default_genesis_seconds + 100,
+            Uint256::from(1000000u128),
+        )],
+    };
+    let info = mock_info("addr0000", &[]);
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: Uint128::from(100u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+
+    let info = mock_info("miawlp0000", &[]);
+    let env = mock_env();
+    execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0001".to_string(),
+        amount: Uint128::from(200u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0002".to_string(),
+        amount: Uint128::from(300u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    assert_eq!(
+        from_binary::<StakersInfoResponse>(
+            &query(
+                deps.as_ref(),
+                env.clone(),
+                QueryMsg::StakersInfo {
+                    start_after: None,
+                    limit: None,
+                    order_by: Some(OrderBy::Asc),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+        StakersInfoResponse {
+            stakers: vec![
+                StakerInfoResponse {
+                    staker: "addr0000".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(100u128),
+                },
+                StakerInfoResponse {
+                    staker: "addr0001".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(200u128),
+                },
+                StakerInfoResponse {
+                    staker: "addr0002".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(300u128),
+                },
+            ]
+        }
+    );
+    assert_eq!(
+        from_binary::<StakersInfoResponse>(
+            &query(
+                deps.as_ref(),
+                env.clone(),
+                QueryMsg::StakersInfo {
+                    start_after: None,
+                    limit: None,
+                    order_by: None,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+        StakersInfoResponse {
+            stakers: vec![
+                StakerInfoResponse {
+                    staker: "addr0002".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(300u128),
+                },
+                StakerInfoResponse {
+                    staker: "addr0001".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(200u128),
+                },
+                StakerInfoResponse {
+                    staker: "addr0000".to_string(),
+                    reward_index: Decimal256::zero(),
+                    pending_reward: Uint256::zero(),
+                    bond_amount: Uint256::from(100u128),
+                },
+            ]
+        }
+    );
+    assert_eq!(
+        from_binary::<StakersInfoResponse>(
+            &query(
+                deps.as_ref(),
+                env.clone(),
+                QueryMsg::StakersInfo {
+                    start_after: Some("addr0002".to_string()),
+                    limit: Some(1u32),
+                    order_by: None,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+        StakersInfoResponse {
+            stakers: vec![StakerInfoResponse {
+                staker: "addr0001".to_string(),
+                reward_index: Decimal256::zero(),
+                pending_reward: Uint256::zero(),
+                bond_amount: Uint256::from(200u128),
+            },]
+        }
+    );
+    assert_eq!(
+        from_binary::<StakersInfoResponse>(
+            &query(
+                deps.as_ref(),
+                env,
+                QueryMsg::StakersInfo {
+                    start_after: Some("addr0001".to_string()),
+                    limit: Some(1u32),
+                    order_by: Some(OrderBy::Asc),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+        StakersInfoResponse {
+            stakers: vec![StakerInfoResponse {
+                staker: "addr0002".to_string(),
+                reward_index: Decimal256::zero(),
+                pending_reward: Uint256::zero(),
+                bond_amount: Uint256::from(300u128),
+            },]
+        }
+    );
 }

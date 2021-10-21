@@ -8,7 +8,7 @@ use cw20::Cw20ReceiveMsg;
 use crate::error::ContractError;
 use crate::handle::{bond, bond_hook, claim_rewards, unbond};
 use crate::msg::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::query::{query_config, query_staker_info, query_state};
+use crate::query::{query_config, query_staker_info, query_stakers_info, query_state};
 use crate::state::{Config, State, CONFIG, STATE};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -75,6 +75,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
         QueryMsg::State {} => Ok(to_binary(&query_state(deps)?)?),
         QueryMsg::StakerInfo { staker } => Ok(to_binary(&query_staker_info(deps, env, staker)?)?),
+        QueryMsg::StakersInfo {
+            start_after,
+            limit,
+            order_by,
+        } => Ok(to_binary(&query_stakers_info(
+            deps,
+            env,
+            start_after,
+            limit,
+            order_by,
+        )?)?),
     }
 }
 
